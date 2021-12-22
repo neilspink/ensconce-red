@@ -1,0 +1,32 @@
+---
+ - hosts: all
+   gather_facts: yes
+   remote_user: provision
+   become: yes
+
+   tasks:
+
+    - name: Pre-Requisites ######################################################
+      block:
+        - name: Install developer tools
+          apt: name=software-properties-common state=latest
+
+        - name: Add specified repository into sources list
+          ansible.builtin.apt_repository:
+            repo: ppa:git-core/ppa
+            state: present
+
+        - name: Install Dev Tools
+          apt: name=python3.9,python3.9-dev,python3.9-venv,python3-pip,git,openjdk-11-jre-headless,build-essential
+
+        - name: Install and upgrade pip
+          pip:
+            name: pip
+            extra_args: --upgrade
+            executable: pip3
+
+        - name: Install python module setuptools
+          pip:
+            name: setuptools
+            executable: pip3
+

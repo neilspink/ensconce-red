@@ -1,0 +1,76 @@
+---
+ - hosts: all
+   vars_prompt:
+    - name: user_password
+      prompt: The 'Provisioner' account password?            
+   vars:
+      user_username: provisioner
+      user_passfile: ssh/provisioner.hash
+      user_sshfile: ssh/provisioner-rsa
+   gather_facts: no
+
+   tasks:
+    - name: Check For Existance Of {{ user_sshfile }}
+      stat:
+        path: "{{ user_sshfile }}"
+      register: sshkey
+      delegate_to: localhost
+
+    - name: Make SSH Key {{ user_sshfile }}
+      command : ssh-keygen -q -b 4096 -f {{ user_sshfile }}
+      delegate_to: localhost
+      when: not sshkey.stat.exists
+
+    - name: Check For Existance Of {{ user_passfile }} 
+      stat:
+        path: "{{ user_passfile }}"
+      register: passfile
+      delegate_to: localhost
+
+    - name: Generate User Password File
+      shell: python3 ./files/password_hasher.py {{ user_password }} > {{ user_passfile }}
+      when: not passfile.stat.exists
+      delegate_to: localhost
+
+    - name: Create Remote User Account {{ user_username }}
+      user: 
+        name: "{{ user_username }}" 
+        password: "{{ lookup('file', user_passfile) }}" 
+        group: "sudo" 
+        shell: /bin/bash
+      become: yes
+
+    - name: Deploy SSH Key {{ user_sshfile }} For {{ user_username }}
+      authorized_key: user="{{ user_username }}"
+                      key="{{ lookup('file', user_sshfile + '.pub') }}"
+                      state=present
+      become: yes
+
+    - name: Disable Password Authentication
+      lineinfile:
+            dest=/etc/ssh/sshd_config
+            regexp='^PasswordAuthentication'
+            line="PasswordAuthentication no"
+            state=present
+            backup=yes
+      notify:
+        - restart ssh      
+      become: yes
+
+    - name: Disable Root Login
+      lineinfile:
+            dest=/etc/ssh/sshd_config
+            regexp='^PermitRootLogin'
+            line="PermitRootLogin no"
+            state=present
+            backup=yes
+      notify:
+        - restart ssh
+      become: yes
+
+   handlers:
+   - name: restart ssh
+     service:
+       name=sshd
+       state=restarted
+     become: yes

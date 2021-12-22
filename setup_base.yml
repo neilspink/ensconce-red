@@ -1,0 +1,186 @@
+---
+ - hosts: all
+   vars:
+   gather_facts: yes
+   remote_user: provisioner
+   become: yes
+ 
+   tasks:
+
+    - name: Update
+      raw: apt-get -y --allow-unauthenticated update || true
+
+    - name: Upgrade
+      raw: apt-get -y --allow-unauthenticated upgrade
+
+    - name: Install CRON 
+      apt:
+        name: cron
+        state: present
+
+    # FIREWALL
+
+    - name: Install Apache UFW 
+      apt:
+        name: ufw
+        state: present
+        
+    - name: Allow SSH connections
+      ufw:
+        rule: allow
+        name: OpenSSH
+    
+    - name: Deny All Other Incoming Traffic By Default
+      ufw:
+        state: enabled
+        policy: deny
+        direction: incoming
+
+    # FAIL 2 BAN 
+
+    - name: Install Fail2ban Package
+      apt: name=fail2ban update_cache=yes state=latest force_apt_get=yes
+
+    - name: Upload fail2ban config        
+      copy:
+        src: files/fail2ban.local
+        dest: /etc/fail2ban/jail.d/jail.local
+        owner: root
+        group: root
+        mode: 0644        
+
+    - name: Ensure Logfile Exists
+      copy:
+        content: ""
+        dest: /var/log/auth.log
+        force: no
+        group: root
+        owner: root
+        mode: 0644
+                
+    - name: Enable Fail2ban Service
+      systemd:
+        name: fail2ban
+        enabled: yes
+        state: started
+
+    # AUTO UPDATE / UPGRADE MACHINE        
+
+    - name: Install Unattended-Upgrades
+      apt: name=unattended-upgrades state=latest
+  
+    - name: Enable 50unattended-Upgrades
+      copy:
+        dest: /etc/apt/apt.conf.d/50unattended-upgrades-local
+        content: |
+          Unattended-Upgrade::Allowed-Origins {
+            "${distro_id}:${distro_codename}";
+            "${distro_id}:${distro_codename}-security";
+            // Extended Security Maintenance; doesn't necessarily exist for
+            // every release and this system may not have it installed, but if
+            // available, the policy for updates is such that unattended-upgrades
+            // should also install from here by default.
+            "${distro_id}ESM:${distro_codename}";
+            "${distro_id}:${distro_codename}-updates";
+          };
+          Unattended-Upgrade::DevRelease "false";
+          Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+          Unattended-Upgrade::Automatic-Reboot "true";
+          Unattended-Upgrade::Automatic-Reboot-Time "02:45";
+          
+    - name: Enable 20auto-Upgrades
+      copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Download-Upgradeable-Packages "1";
+          APT::Periodic::AutocleanInterval "7";
+          APT::Periodic::Unattended-Upgrade "1";
+
+    - name: Dry run unattended upgrades
+      command: unattended-upgrades --dry-run --debug
+      become: yes
+      become_user: root
+
+    # Harden System
+
+    - name: Reduced login grace period
+      lineinfile:
+            dest=/etc/ssh/sshd_config
+            regexp='^LoginGraceTime'
+            line="LoginGraceTime 20"
+            state=present
+            backup=yes
+      become: yes
+
+    - name: Disable authentication with empty passwords
+      lineinfile:
+            dest=/etc/ssh/sshd_config
+            regexp='^PermitEmptyPasswords'
+            line="PermitEmptyPasswords no"
+            state=present
+            backup=yes
+      become: yes
+
+    - name: Disable ChallengeResponseAuthentication
+      lineinfile:
+            dest=/etc/ssh/sshd_config
+            regexp='^ChallengeResponseAuthentication'
+            line="ChallengeResponseAuthentication no"
+            state=present
+            backup=yes
+      become: yes
+
+    - name: Disable GSSAPIAuthentication
+      lineinfile:
+            dest=/etc/ssh/sshd_config
+            regexp='^GSSAPIAuthentication'
+            line="GSSAPIAuthentication no"
+            state=present
+            backup=yes
+      become: yes
+
+    - name: Disable KerberosAuthentication
+      lineinfile:
+            dest=/etc/ssh/sshd_config
+            regexp='^KerberosAuthentication'
+            line="KerberosAuthentication no"
+            state=present
+            backup=yes
+      become: yes
+
+    - name: Disable display of remote graphical applications
+      lineinfile:
+            dest=/etc/ssh/sshd_config
+            regexp='^X11Forwarding'
+            line="X11Forwarding no"
+            state=present
+            backup=yes
+      become: yes
+
+    - name: Disable AllowAgentForwarding
+      lineinfile:
+            dest=/etc/ssh/sshd_config
+            regexp='^AllowAgentForwarding'
+            line="AllowAgentForwarding no"
+            state=present
+            backup=yes
+      become: yes
+
+    - name: Disable AllowTcpForwarding
+      lineinfile:
+            dest=/etc/ssh/sshd_config
+            regexp='^AllowTcpForwarding'
+            line="AllowTcpForwarding no"
+            state=present
+            backup=yes
+      become: yes
+
+    - name: Disable PermitTunnel
+      lineinfile:
+            dest=/etc/ssh/sshd_config
+            regexp='^PermitTunnel'
+            line="PermitTunnel no"
+            state=present
+            backup=yes
+      become: yes

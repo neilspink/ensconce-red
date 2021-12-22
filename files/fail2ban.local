@@ -1,0 +1,15 @@
+[DEFAULT]
+# "ignoreip" can be an IP address, a CIDR mask or a DNS host
+ignoreip = 127.0.0.1
+bantime  = 600
+findtime = 600
+maxretry = 10
+
+[ssh]
+enabled = true
+port    = ssh
+filter  = sshd
+logpath  = /var/log/auth.log
+bantime  = 600
+findtime = 600
+maxretry = 10
