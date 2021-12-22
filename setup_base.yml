@@ -1,6 +1,5 @@
 ---
  - hosts: all
-   vars:
    gather_facts: yes
    remote_user: provisioner
    become: yes
