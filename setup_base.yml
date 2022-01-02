@@ -182,3 +182,69 @@
             state=present
             backup=yes
       become: yes
+
+    - name: Terminate SSH client session after 5 minutes of idle time (no keepalive messages).
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regex: ^(# *)?ClientAliveCountMax
+        line: ClientAliveCountMax 0
+
+    - name: SSH keep alive interval 300 (5 minutes)
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regex: ^(# *)?ClientAliveInterval
+        line: ClientAliveInterval 300
+
+    - name: Restricting the frequency of password changes
+      lineinfile:
+        path: /etc/login.defs
+        regex: ^(# *)?PASS_MIN_DAYS
+        line: PASS_MIN_DAYS 7
+
+    - name: Authority settings for /etc/passwd
+      file:
+        path: /etc/passwd
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Authority settings for /etc/shadow
+      file:
+        path: /etc/shadow
+        owner: root
+        group: root
+        mode: '0400'
+
+    - name: Authority settings for /etc/group
+      file:
+        path: /etc/group
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Authority settings for /etc/gshadow
+      file:
+        path: /etc/gshadow
+        owner: root
+        group: root
+        mode: '0400'
+
+    - name: Password Complexity Check
+      apt: name=libpam-cracklib state=latest
+
+    - name: Update pam_cracklib.so in /etc/pam.d/common-password
+      lineinfile:
+        path: /etc/pam.d/common-password
+        state: present
+        regex: pam_cracklib.so
+        line: password requisite pam_cracklib.so retry=3 minlen=10 difok=3 minclass=3
+
+    - name: Update pam_unix.so in /etc/pam.d/common-password
+      lineinfile:
+        path: /etc/pam.d/common-password
+        state: present
+        regex: pam_unix.so
+        line: password [success=1 default=ignore] pam_unix.so obscure use_authtok try_first_pass sha512 minlen=10 remember=5
+
+    - name: Change root user password minimum number of days between password (always true)
+      command: chage --mindays 7 root
