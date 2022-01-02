@@ -1,7 +1,5 @@
 ---
  - hosts: all
-   gather_facts: yes
-   remote_user: provision
    become: yes
 
    tasks:

@@ -1,25 +1,19 @@
 ---
- - hosts: all
+ - hosts: all 
    vars_prompt:
-    - name: user_password
-      prompt: The 'Provisioner' account password?            
+    - name: user_username
+      prompt: What is the ansible provisioner account username?
+      private: no
    vars:
-      user_username: provisioner
-      user_passfile: ssh/provisioner.hash
-      user_sshfile: ssh/provisioner-rsa
+      user_passfile: "ssh/{{ user_username }}.hash"
+      user_sshfile: "ssh/{{ user_username }}-rsa"
    gather_facts: no
-
    tasks:
     - name: Check For Existance Of {{ user_sshfile }}
       stat:
         path: "{{ user_sshfile }}"
       register: sshkey
       delegate_to: localhost
-
-    - name: Make SSH Key {{ user_sshfile }}
-      command : ssh-keygen -q -b 4096 -f {{ user_sshfile }}
-      delegate_to: localhost
-      when: not sshkey.stat.exists
 
     - name: Check For Existance Of {{ user_passfile }} 
       stat:
@@ -28,9 +22,19 @@
       delegate_to: localhost
 
     - name: Generate User Password File
-      shell: python3 ./files/password_hasher.py {{ user_password }} > {{ user_passfile }}
+      shell: python3 ./files/password_hasher.py {{ user_passfile }}
+      register: generated_password
       when: not passfile.stat.exists
       delegate_to: localhost
+
+    - name: set generated_password {{ generated_password }}
+      set_fact:
+        secret_password: "{{ generated_password.stdout }}"
+
+    - name: Make SSH Key {{ user_sshfile }}
+      command : ssh-keygen -q -b 4096 -f {{ user_sshfile }} -P {{ secret_password }}
+      delegate_to: localhost
+      when: not sshkey.stat.exists
 
     - name: Create Remote User Account {{ user_username }}
       user: 
@@ -39,6 +43,11 @@
         group: "sudo" 
         shell: /bin/bash
       become: yes
+
+    - name: Clean up generated hash which is no longer needed.
+      file:
+        state: absent
+        path: "{{ user_passfile }}"
 
     - name: Deploy SSH Key {{ user_sshfile }} For {{ user_username }}
       authorized_key: user="{{ user_username }}"
@@ -67,6 +76,10 @@
       notify:
         - restart ssh
       become: yes
+
+    - name: The Account {{ user_username }} Password
+      ansible.builtin.debug:
+        var: secret_password
 
    handlers:
    - name: restart ssh
