@@ -14,7 +14,7 @@ SSH onto the machine, so the fingerprint is added to the known machines list. Ma
 sudo apt install openssh-server
 ```
 
-Test connectivity to server. Ensure IP in both 'hosts' amd 'hosts_warm' files is correct, then run 
+Test connectivity to server. Ensure the IP is updated in the 'hosts' file before testing 
 ```
 ansible -i hosts -u <USERID> -m raw -a 'lsb_release -a' test --ask-pass
 ```
@@ -38,8 +38,6 @@ Add SSH private key to the ssh-agent (for ansible to be able to access the priva
 ssh-add ssh/provisioner-rsa
 ssh -i ssh/provisioner-rsa provisioner@192.168.122.184 
 ```
-
-Update the hosts_warm file, setting the ansible_ssh_private_key_file to the generated SSH key.
 
 Basis VM configuration; updates, firewall, fail2ban, unattended-upgrades.
 ```
