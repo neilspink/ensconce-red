@@ -48,7 +48,8 @@
       file:
         state: absent
         path: "{{ user_passfile }}"
-
+      delegate_to: localhost
+      
     - name: Deploy SSH Key {{ user_sshfile }} For {{ user_username }}
       authorized_key: user="{{ user_username }}"
                       key="{{ lookup('file', user_sshfile + '.pub') }}"
