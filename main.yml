@@ -1,0 +1,29 @@
+---
+- name: Configure Everything.
+  hosts: all
+  vars_prompt:
+    - name: user_username
+      prompt: What is the ansible provisioner account username?
+      private: no
+  vars:
+    user_passfile: "ssh/{{ user_username }}.hash"
+    user_sshfile: "ssh/{{ user_username }}-rsa"
+  gather_facts: yes
+  become: yes
+  
+  tasks:
+#    - import_tasks: tasks/base_config.yml
+    - import_tasks: tasks/setup_provisioner.yml
+    - import_tasks: tasks/setup_red.yml
+    - import_tasks: tasks/lockdown_ssh.yml
+
+    - name: The Account {{ user_username }} Password
+      ansible.builtin.debug:
+        var: secret_password
+
+  handlers:
+  - name: restart ssh
+    service:
+      name=sshd
+      state=restarted
+    become: yes

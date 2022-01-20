@@ -1,0 +1,39 @@
+---
+  - name: Install developer tools
+    apt: name=software-properties-common state=latest
+    become: yes
+
+  - name: Add specified repository into sources list
+    ansible.builtin.apt_repository:
+      repo: ppa:git-core/ppa
+      state: present
+    become: yes
+
+  - name: Install Dev Tools
+    apt: name=python3.9,python3.9-dev,python3.9-venv,python3-pip,git,openjdk-11-jre-headless,build-essential
+    become: yes
+
+  - name: Install and upgrade pip
+    pip:
+      name: pip
+      extra_args: --upgrade
+      executable: pip3
+    become: yes
+
+  - name: Install python module setuptools
+    pip:
+      name: setuptools
+      executable: pip3
+    become: yes
+
+  - name: Install python module wheel
+    pip:
+      name: wheel
+      executable: pip3
+    become: yes
+
+  - name: Install python module Red-DiscordBot
+    pip:
+      name: Red-DiscordBot
+      executable: pip3
+    become: yes
