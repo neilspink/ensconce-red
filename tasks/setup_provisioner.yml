@@ -4,7 +4,8 @@
       path: "{{ user_sshfile }}"
     register: sshkey
     delegate_to: localhost
-    
+    become: no
+        
   - name: Check For Existance Of {{ user_passfile }} 
     stat:
       path: "{{ user_passfile }}"
